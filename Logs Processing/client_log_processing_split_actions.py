@@ -33,23 +33,25 @@ def extractDateTime(date, time):
     - Convert date of form datetime(yyyy, mm, dd, HH, MM, SS)
     - Create a dictionary/JSON with key-value pairs which is then added to MongoDB
 """
-def insertOneDoc(date, time, membership_number, session_id, miniapp_name, action):
+def insertOneDoc(date, time, membership_number, session_id, miniapp_name, main_action, middle_action, end_action):
     year, month, day, hour, minutes, seconds = extractDateTime(date, time)
     date_time = datetime(year, month, day, hour, minutes, seconds)
-    entry = createDictionary(date_time, membership_number, session_id, miniapp_name, action)
+    entry = createDictionary(date_time, membership_number, session_id, miniapp_name, main_action, middle_action, end_action)
     mongo_collection.insert_one(entry)
 
 
 """
     - Returns a JSON object containing each parameter and it's value as a key-value pair.
 """
-def createDictionary(date_time, membership_number, session_id, miniapp_name, action):
+def createDictionary(date_time, membership_number, session_id, miniapp_name, main_action, middle_action, end_action):
     entry = {
         "Date_Time" : date_time,
         "Membership_Number" : membership_number,
         "Session_ID" : session_id,
         "Mini_App_Name" : miniapp_name,
-        "Action" : action,
+        "Main_Action" : main_action,
+        "Middle_Action" : middle_action,
+        "End_Action" : end_action
     }
     return entry
 
@@ -70,29 +72,26 @@ def extractSuccessfulJourneys(customer_paths):
     incomplete_journeys = []
 
     for path_num in range(len(customer_paths)):
-        # start_path = extractFullAction(customer_paths, path_num)
-        start_path = customer_paths[path_num]["Action"]
+        start_path = extractFullAction(customer_paths, path_num)
+
         if (start_path in startURLs):
             print("Start URL:", start_path)
 
             for next_URL_index in range(path_num + 1, len(customer_paths)):
-                # next_end_point = extractFullAction(customer_paths, next_URL_index)
-                next_end_point = customer_paths[next_URL_index]["Action"]
+                next_end_point = extractFullAction(customer_paths, next_URL_index)
                 journey_name = customer_paths[path_num + 1]["Mini_App_Name"]
-                journey_begin_timestamp = customer_paths[path_num]["Date_Time"]
+                journey_timestamp = customer_paths[path_num + 1]["Date_Time"]
                 # print(journey_name)
                 print("Next URL:", next_end_point)
 
                 # If next end point is a logical next URL
                 if (next_end_point in endPointMappings[start_path]):
-                    journey_end_timestamp = customer_paths[next_URL_index]["Date_Time"]
-                    completed_journeys.append([journey_name, [journey_begin_timestamp, start_path], [journey_end_timestamp, next_end_point]])
+                    completed_journeys.append([journey_name, journey_timestamp, start_path, next_end_point])
                     break
 
                 # If next end point is not a logical next URL => Journey Incomplete
                 elif (next_end_point in endURLs):
-                    journey_end_timestamp = customer_paths[next_URL_index]["Date_Time"]
-                    incomplete_journeys.append([journey_name, [journey_begin_timestamp, start_path], [journey_end_timestamp, next_end_point]])
+                    incomplete_journeys.append([journey_name, journey_timestamp, start_path, next_end_point])
                     break
 
     return completed_journeys, incomplete_journeys
@@ -129,17 +128,18 @@ if __name__ == '__main__':
     mongo_URI = "mongodb+srv://ritviksharma4:" + urllib.parse.quote("mongo!@#123") + "@cluster0.5q21c.mongodb.net/?retryWrites=true&w=majority"
     client = MongoClient(mongo_URI)
     client_logs_db = client.get_database("client_logs")
-    mongo_collection = client_logs_db.banking_logs_full_actions
+    mongo_collection = client_logs_db.banking_logs
 
     # Sample Insertion
-    date = "28-05-2022"
-    time = "7:19:55"
-    membership_number = "1"
-    session_id = "101"
+    date = "26-05-2022"
+    time = "12:14:05"
+    membership_number = "3"
+    session_id = "103"
     miniapp_name = "AUTH"
-    action = "/ol/br/logoff"
-
-    # insertOneDoc(date, time, membership_number, session_id, miniapp_name, action)
+    main_action = "ol"
+    middle_action = "br"
+    end_action = "logoff"
+    # insertOneDoc(date, time, membership_number, session_id, miniapp_name, main_action, middle_action, end_action)
 
     # # Fetch All Entries
     # entries = fetchAllEntries()
@@ -151,12 +151,12 @@ if __name__ == '__main__':
             - If irrespective of session_id, give only membership_number in function call
             - If query is for a specific session, given membership_number and session_id
     """
-    customer_journeys = findParticularCustomerJourneys(membership_number = "1", session_id = "101")
+    customer_journeys = findParticularCustomerJourneys(membership_number = "3", session_id = "103")
     customer_paths = []
     for journey in customer_journeys:
         for path in journey:
             customer_paths.append(path)
-            # print(path)
+            print(path)
     completed_journeys, incomplete_journeys = extractSuccessfulJourneys(customer_paths)
     print("Completed Journeys:", completed_journeys)
     print("Incomplete Journeys:", incomplete_journeys)
