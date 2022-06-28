@@ -5,6 +5,7 @@ import urllib
 """
     - Mapping of start URLs and end URLs.
     - List of possible startURLs and EndURLs.
+    - List of possible journeys.
 """
 
 endPointMappings = {
@@ -16,6 +17,7 @@ endPointMappings = {
 
 endURLs = ["/ol/transaction/pay", "/ol/br/logoff", "/ol/br/home"]
 startURLs = ["/ol/transaction/pay", "/ol/br/logoff", "/ol/br/home"]
+service_request_stats = {"AUTH" : [0, 0], "PAYMENT" : [0, 0]} 
 
 """
     - Split the string of form dd-mm-yyyy to extract year, month and day
@@ -53,21 +55,38 @@ def createDictionary(date_time, membership_number, session_id, miniapp_name, act
     }
     return entry
 
+"""
+    - Find the number of successful and unsuccessful journeys of each journey type.
+"""
+def findservice_request_statsJourneyFrequency(completed_journeys, incomplete_journeys):
+    
+    for event in completed_journeys:
+        service_request_stats[event[0]][0] += 1
+    for event in incomplete_journeys:
+        service_request_stats[event[0]][1] += 1
+    return service_request_stats
+
 
 """
-    - Combine the Main_Action, Middle_Action and End_Action.
+    - Find Completion Rate of each Journey.
 """
-def extractFullAction(customer_paths, path_num):
-    full_action = "/" + customer_paths[path_num]["Main_Action"] + "/" +  customer_paths[path_num]["Middle_Action"] + "/" + customer_paths[path_num]["End_Action"]
-    return full_action
+def findCompletionRate(service_request_stats):
+
+    journey_stats = []
+    for mini_app in service_request_stats.keys():
+        completion_rate = service_request_stats[mini_app][0] / (service_request_stats[mini_app][0] + service_request_stats[mini_app][1]) * 100
+        journey_stats.append([mini_app, completion_rate])
+
+    return journey_stats
 
 """
     Given a particular customer's journeys, identify the successful journeys
 """
-def extractSuccessfulJourneys(customer_paths):
+def extractJourneysAndFreq(customer_paths):
 
     completed_journeys = []
     incomplete_journeys = []
+    action_freq = {}
 
     for path_num in range(len(customer_paths)):
         # start_path = extractFullAction(customer_paths, path_num)
@@ -83,6 +102,12 @@ def extractSuccessfulJourneys(customer_paths):
                 # print(journey_name)
                 print("Next URL:", next_end_point)
 
+                # Calculate frequency of every action taken by customer.
+                if (next_end_point not in action_freq.keys()):
+                        action_freq[next_end_point] = 1
+                else:
+                    action_freq[next_end_point] += 1
+
                 # If next end point is a logical next URL
                 if (next_end_point in endPointMappings[start_path]):
                     journey_end_timestamp = customer_paths[next_URL_index]["Date_Time"]
@@ -95,7 +120,7 @@ def extractSuccessfulJourneys(customer_paths):
                     incomplete_journeys.append([journey_name, [journey_begin_timestamp, start_path], [journey_end_timestamp, next_end_point]])
                     break
 
-    return completed_journeys, incomplete_journeys
+    return completed_journeys, incomplete_journeys, action_freq
     
 
 """
@@ -156,7 +181,16 @@ if __name__ == '__main__':
     for journey in customer_journeys:
         for path in journey:
             customer_paths.append(path)
-            # print(path)
-    completed_journeys, incomplete_journeys = extractSuccessfulJourneys(customer_paths)
-    print("Completed Journeys:", completed_journeys)
-    print("Incomplete Journeys:", incomplete_journeys)
+            print(path)
+    # print(customer_paths)
+
+    completed_journeys, incomplete_journeys, action_freq = extractJourneysAndFreq(customer_paths)
+    print("\nCompleted Journeys:", completed_journeys)
+    print("\nIncomplete Journeys:", incomplete_journeys)
+    print("\nAction Freq:", action_freq)
+
+    service_request_stats = findservice_request_statsJourneyFrequency(completed_journeys, incomplete_journeys)
+    print("\nService Request Stats:", service_request_stats)
+
+    journey_stats = findCompletionRate(service_request_stats)
+    print("\nJourney Stats:", journey_stats)
