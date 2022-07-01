@@ -1,0 +1,40 @@
+Attributes:
+	- Date
+	- Time
+	- Membership_Number
+	- SessionID
+	- MiniApp_Name
+	- Main_Action
+	- Middle_Action
+	- End_Action (xyz.json)
+
+Possible Query Scenarios:
+	- Customer journeys on a specific date
+		- select * from db where date = '&Date';
+
+	- Number of requests made in between a time-frame
+		- select count(*) from db where time inbetween('&Time', '&Time');
+
+	- Top "n" visited journeys
+		- select Main_Action, Middle_Action, End_Action from db group by membership_Number, SessionID order by Time asc;
+		- [End Points] to be maintained.
+		- End_points = [["EndPointName", completed, incomplete]] -> Another table?
+		- Have a sliding window between end points.
+			- Check whether end points form a logical start and end point.
+				- Yes -> Increment "completed" for that journey and Shift sliding window
+				- No -> Increment "incomplete" for that journey and Shift sliding window
+			- Sort by completed and display top "n"
+
+	- For a given customer, find all journeys.
+		-	select Main_Action, Middle_Action, End_Action from db group by Membership_Number, SessionID order by Time asc;
+		- [End Points] to be maintained.
+		- Have a sliding window between end points.
+			- Check whether end points form a logical start and end point.
+				- Yes -> Display Main_Action + Middle_Action + End_Action and Shift sliding window
+				- No -> Shift sliding window
+
+
+remove semicolons
+handle in/out
+
+	

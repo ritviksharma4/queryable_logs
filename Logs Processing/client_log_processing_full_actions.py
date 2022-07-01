@@ -185,6 +185,7 @@ if __name__ == '__main__':
     # print(customer_paths)
 
     completed_journeys, incomplete_journeys, action_freq = extractJourneysAndFreq(customer_paths)
+    
     print("\nCompleted Journeys:", completed_journeys)
     print("\nIncomplete Journeys:", incomplete_journeys)
     print("\nAction Freq:", action_freq)
